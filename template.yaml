@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SaafHawa - personal clean-air planner (Lambda + API Gateway + DynamoDB + SNS + EventBridge)
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 29
+    MemorySize: 512
+
+Resources:
+  DataTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  BriefTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: SaafHawa
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+
+  AppFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: app.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref DataTable
+          TOPIC_ARN: !Ref BriefTopic
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DataTable
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - sns:Publish
+                - sns:Subscribe
+                - sns:Unsubscribe
+              Resource: !Ref BriefTopic
+            - Effect: Allow
+              Action:
+                - sns:Unsubscribe
+              Resource: '*'
+      Events:
+        Home:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /
+            Method: GET
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /api/{proxy+}
+            Method: ANY
+        MorningBrief:
+          Type: Schedule
+          Properties:
+            Schedule: cron(30 0 * * ? *)
+            Description: 6:00 AM IST daily clean-air brief for every subscriber
+
+Outputs:
+  AppUrl:
+    Description: Open this in a browser
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+  TopicArn:
+    Value: !Ref BriefTopic
+  TableName:
+    Value: !Ref DataTable

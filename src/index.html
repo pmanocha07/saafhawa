@@ -1,0 +1,996 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SaafHawa · Clean-air planner</title>
+<meta name="description" content="Delhi is always red, but not equally red. SaafHawa finds the cleanest hours in your day for the things you can't skip.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f2ec;
+    --surface: #ffffff;
+    --surface-2: #f9f8f4;
+    --ink: #17201c;
+    --ink-2: #4b5751;
+    --muted: #7a8580;
+    --line: #e4e0d6;
+    --brand: #13644f;
+    --brand-2: #e1f0ea;
+    --brand-ink: #ffffff;
+    --good: #2f8a55;
+    --bad: #c8412f;
+    --warn: #b7791f;
+    --shadow: 0 1px 2px rgba(20, 30, 25, .05), 0 6px 24px rgba(20, 30, 25, .06);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1412;
+      --surface: #171e1b;
+      --surface-2: #1c2421;
+      --ink: #ecf1ee;
+      --ink-2: #b9c4bf;
+      --muted: #8a9690;
+      --line: #28322e;
+      --brand: #4cc29d;
+      --brand-2: #1b3129;
+      --brand-ink: #08130f;
+      --good: #5cc98a;
+      --bad: #ff7a66;
+      --warn: #f0b04a;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 24px rgba(0,0,0,.25);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.55 "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+  /* Top bar */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar .row { display: flex; align-items: center; gap: 14px; padding: 12px 0; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em; white-space: nowrap; }
+  .logo svg { flex: none; }
+  .loc {
+    margin-left: auto; display: flex; gap: 8px; align-items: center; min-width: 0; flex: 0 1 420px;
+  }
+  .loc form { display: flex; gap: 8px; flex: 1; min-width: 0; }
+  .input, select.input {
+    width: 100%; min-width: 0; padding: 9px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  }
+  .btn {
+    padding: 9px 14px; border-radius: 10px; border: 1px solid transparent; cursor: pointer;
+    background: var(--brand); color: var(--brand-ink); font-weight: 700; white-space: nowrap;
+  }
+  .btn.ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+  .btn.small { padding: 6px 10px; font-size: .85rem; }
+  .btn:disabled { opacity: .55; cursor: wait; }
+  .icon-btn { width: 40px; padding: 0; display: grid; place-items: center; flex: none; }
+  nav.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-bottom: 10px; }
+  nav.tabs::-webkit-scrollbar { display: none; }
+  nav.tabs a {
+    padding: 7px 14px; border-radius: 999px; text-decoration: none; color: var(--ink-2);
+    font-weight: 600; white-space: nowrap; font-size: .92rem;
+  }
+  nav.tabs a[aria-current="page"] { background: var(--ink); color: var(--bg); }
+
+  main { padding: 22px 0 64px; }
+  .tab { display: none; }
+  .tab.active { display: block; }
+  h1, h2, h3 { letter-spacing: -0.02em; margin: 0; }
+  h2.section { font-size: 1.35rem; margin: 6px 0 4px; }
+  p.lead { color: var(--ink-2); margin: 0 0 18px; max-width: 720px; }
+  .grid { display: grid; gap: 16px; }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 860px) { .g3, .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 620px) { .g2, .g3, .g4 { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px; box-shadow: var(--shadow); min-width: 0;
+  }
+  .card h3 { font-size: 1rem; margin-bottom: 10px; }
+  .kicker { font-size: .74rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+  .big { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+  .muted { color: var(--muted); }
+  .sub { color: var(--ink-2); font-size: .9rem; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: .8rem; font-weight: 700; color: #fff; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+  .row-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .stack > * + * { margin-top: 10px; }
+  .hidden { display: none !important; }
+  .msg { margin: 10px 0 0; font-size: .92rem; }
+  .msg.err { color: var(--bad); }
+  .msg.ok { color: var(--good); }
+
+  /* Hero */
+  .hero { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } }
+  .now-card { display: flex; gap: 18px; align-items: center; }
+  .ring { width: 108px; height: 108px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: none; text-align: center; }
+  .ring b { display: block; font-size: 2.1rem; line-height: 1; font-weight: 800; }
+  .ring span { font-size: .7rem; opacity: .92; }
+  .insight { background: var(--brand-2); border-color: transparent; }
+  .windows { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .win { padding: 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+  .win .t { font-weight: 800; font-size: 1.05rem; }
+  .win.clean { border-left: 4px solid var(--good); }
+  .win.dirty { border-left: 4px solid var(--bad); }
+
+  /* Chart */
+  .chart { width: 100%; height: auto; display: block; overflow: visible; }
+  .chart text { fill: var(--muted); font-size: 11px; font-family: inherit; }
+  .chart .gridline { stroke: var(--line); stroke-width: 1; }
+  .chart .nowline { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .chart .bar:hover { opacity: .8; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: .8rem; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .tooltip {
+    position: fixed; pointer-events: none; z-index: 50; background: var(--ink); color: var(--bg);
+    padding: 6px 10px; border-radius: 8px; font-size: .82rem; font-weight: 600; transform: translate(-50%, -120%);
+    white-space: nowrap;
+  }
+
+  /* Planner */
+  .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+  .seg button { border: 0; background: transparent; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; color: var(--ink-2); }
+  .seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+  .routine-row { display: grid; grid-template-columns: 1.6fr 1fr .8fr auto; gap: 8px; align-items: center; }
+  @media (max-width: 620px) { .routine-row { grid-template-columns: 1fr 1fr; } .routine-row .del { grid-column: span 2; } }
+  .plan-card .shift { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+  .plan-card .from { text-decoration: line-through; color: var(--muted); }
+  .plan-card .to { font-weight: 800; font-size: 1.15rem; }
+  .save { font-weight: 800; color: var(--good); }
+  .totals { display: flex; gap: 22px; flex-wrap: wrap; }
+  .totals div b { display: block; font-size: 1.5rem; font-weight: 800; }
+
+  /* Exposure */
+  .daybars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: end; height: 180px; }
+  .daybar { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 6px; min-width: 0; }
+  .daybar .b { width: 100%; max-width: 54px; border-radius: 8px 8px 4px 4px; }
+  .daybar .b.forecast { opacity: .55; background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.25) 0 6px, transparent 6px 12px); }
+  .daybar small { font-size: .72rem; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .daybar .v { font-size: .78rem; font-weight: 700; }
+  .cigs { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 8px; }
+  .cigs i { width: 7px; height: 26px; border-radius: 2px; background: linear-gradient(var(--warn) 0 22%, #e9e3d5 22%); display: inline-block; }
+  @media (prefers-color-scheme: dark) { .cigs i { background: linear-gradient(var(--warn) 0 22%, #59544a 22%); } }
+  .cigs i.half { opacity: .45; }
+  input[type=range] { width: 100%; accent-color: var(--brand); }
+
+  table.simple { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  table.simple td, table.simple th { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+  table.simple th { color: var(--muted); font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; }
+  .switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; }
+  .switch input { width: 18px; height: 18px; accent-color: var(--brand); }
+  pre.preview {
+    white-space: pre-wrap; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px; font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin: 0; max-height: 420px; overflow: auto;
+  }
+  .arch { width: 100%; height: auto; }
+  .arch text { fill: var(--ink); font: 600 12px Manrope, sans-serif; }
+  .arch .box { fill: var(--surface-2); stroke: var(--line); }
+  .arch .aws { fill: var(--brand-2); stroke: var(--brand); }
+  .arch .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; marker-end: url(#ah); }
+  .skeleton { min-height: 120px; display: grid; place-items: center; color: var(--muted); }
+  footer { border-top: 1px solid var(--line); padding: 18px 0 40px; color: var(--muted); font-size: .85rem; }
+  footer a { color: var(--brand); }
+  @media (max-width: 720px) {
+    .topbar .row { flex-wrap: wrap; }
+    .loc { flex: 1 1 100%; margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <div class="row">
+      <div class="logo">
+        <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+          <circle cx="14" cy="14" r="13" fill="var(--brand)"/>
+          <path d="M6 12c3-3 6 3 9 0s5-2 7 0M6 17c3-3 6 3 9 0s5-2 7 0" stroke="var(--brand-ink)" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+        SaafHawa
+      </div>
+      <div class="loc">
+        <form id="locForm">
+          <input class="input" id="locInput" placeholder="Search a city, e.g. Delhi" autocomplete="address-level2" aria-label="City">
+          <button class="btn" type="submit">Go</button>
+        </form>
+        <button class="btn ghost icon-btn" id="geoBtn" title="Use my location" aria-label="Use my location">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+        </button>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#today">Today</a>
+      <a href="#planner">Planner</a>
+      <a href="#indoor">Indoor</a>
+      <a href="#exposure">Exposure</a>
+      <a href="#brief">Daily brief</a>
+      <a href="#about">How it works</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <p id="globalMsg" class="msg hidden"></p>
+
+  <!-- TODAY -->
+  <section class="tab" id="tab-today">
+    <div class="hero">
+      <div class="card">
+        <div class="kicker" id="placeName">Loading…</div>
+        <div class="now-card" style="margin-top:10px">
+          <div class="ring" id="nowRing"><div><b id="nowNaqi">-</b><span>NAQI est.</span></div></div>
+          <div class="stack">
+            <div class="big" id="nowCat">-</div>
+            <div class="sub" id="nowMeta"></div>
+            <div class="sub" id="nowCigs"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card insight">
+        <div class="kicker">The air isn't equally bad all day</div>
+        <div style="font-weight:800;font-size:1.15rem;margin-top:6px" id="swingHeadline">-</div>
+        <div class="windows">
+          <div class="win clean"><div class="kicker">Cleanest 3 hours</div><div class="t" id="cleanT">-</div><div class="sub" id="cleanV"></div></div>
+          <div class="win dirty"><div class="kicker">Worst 3 hours</div><div class="t" id="dirtyT">-</div><div class="sub" id="dirtyV"></div></div>
+        </div>
+        <p class="sub" id="whyText" style="margin:12px 0 0"></p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="row-between">
+        <h3 style="margin:0">Hourly PM2.5, today and tomorrow</h3>
+        <span class="sub">µg/m³ · tap a bar for details</span>
+      </div>
+      <div id="hourChart" class="skeleton">Loading forecast…</div>
+      <div class="legend" id="hourLegend"></div>
+    </div>
+
+    <div class="row-between" style="margin-top:22px">
+      <h2 class="section" id="todayPlanTitle">Your routine, re-timed for today</h2>
+      <a class="btn ghost small" href="#planner">Edit routine</a>
+    </div>
+    <div class="grid g3" id="todayPlan" style="margin-top:10px"></div>
+  </section>
+
+  <!-- PLANNER -->
+  <section class="tab" id="tab-planner">
+    <h2 class="section">Planner</h2>
+    <p class="lead">Add the outdoor things you can't skip. SaafHawa checks every possible start time in a sensible range and picks the one with the least PM2.5, then shows how much less you'd breathe in compared with your usual time.</p>
+    <div class="grid g2" style="align-items:start">
+      <div class="card">
+        <h3>My routine</h3>
+        <div id="routineRows" class="stack"></div>
+        <div class="row-between" style="margin-top:14px">
+          <button class="btn ghost small" id="addRow" type="button">+ Add activity</button>
+          <button class="btn" id="runPlan" type="button">Update plan</button>
+        </div>
+        <p id="planMsg" class="msg"></p>
+      </div>
+      <div class="card">
+        <div class="row-between">
+          <h3 style="margin:0">What you save</h3>
+          <div class="seg" id="daySeg"><button data-day="today" class="on">Today</button><button data-day="tomorrow">Tomorrow</button></div>
+        </div>
+        <div class="totals" style="margin-top:14px">
+          <div><span class="kicker">Less PM2.5 inhaled</span><b id="totSaved">-</b></div>
+          <div><span class="kicker">Avg reduction</span><b id="totPct">-</b></div>
+          <div><span class="kicker">Roughly equal to</span><b id="totCigs">-</b></div>
+        </div>
+        <p class="sub" style="margin:12px 0 0">Doses use typical breathing rates: about 3 m³/h running, 1.3 m³/h commuting, 1.6 m³/h for kids at play. Cigarette equivalent uses Berkeley Earth's 22 µg/m³ for a day ≈ 1 cigarette.</p>
+      </div>
+    </div>
+    <div class="grid g2" id="planCards" style="margin-top:16px"></div>
+  </section>
+
+  <!-- INDOOR -->
+  <section class="tab" id="tab-indoor">
+    <h2 class="section">Indoor air</h2>
+    <p class="lead">Most of your day is spent indoors, and outdoor smoke leaks in. Estimate the air inside your room, size a purifier properly, and know when to air the room out.</p>
+    <div class="grid g2" style="align-items:start">
+      <div class="card stack">
+        <h3>Your room</h3>
+        <div class="grid g3">
+          <label class="sub">Length (ft)<input class="input" id="rmL" type="number" min="4" max="60" value="12"></label>
+          <label class="sub">Width (ft)<input class="input" id="rmW" type="number" min="4" max="60" value="10"></label>
+          <label class="sub">Height (ft)<input class="input" id="rmH" type="number" min="7" max="20" value="10"></label>
+        </div>
+        <label class="sub">How sealed is it?
+          <select class="input" id="rmLeak">
+            <option value="1.5">Leaky: gaps under doors, old windows</option>
+            <option value="1" selected>Typical flat</option>
+            <option value="0.5">Well sealed: new windows, weather strips</option>
+          </select>
+        </label>
+        <label class="sub">Your purifier's CADR (m³/h, on the box; 0 if none)
+          <input class="input" id="rmCadr" type="number" min="0" max="2000" value="0">
+        </label>
+        <label class="sub">Outdoor PM2.5 to use (µg/m³)
+          <input class="input" id="rmOut" type="number" min="0" max="999" value="0">
+        </label>
+      </div>
+      <div class="stack">
+        <div class="grid g2">
+          <div class="card"><div class="kicker">Inside, no purifier</div><div class="big" id="inNo">-</div><div class="sub">µg/m³ PM2.5</div></div>
+          <div class="card"><div class="kicker">Inside, with yours</div><div class="big" id="inYes">-</div><div class="sub" id="inYesSub">µg/m³ PM2.5</div></div>
+        </div>
+        <div class="card">
+          <div class="kicker">Purifier you need</div>
+          <div class="big" id="needCadr">-</div>
+          <p class="sub" id="needSub" style="margin:6px 0 0"></p>
+        </div>
+        <div class="card">
+          <div class="kicker" id="ventKicker">Best time to air the room today</div>
+          <div class="big" id="ventBest" style="font-size:1.4rem">-</div>
+          <p class="sub" id="ventSub" style="margin:6px 0 0"></p>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h3>Cheap wins that actually help</h3>
+      <div class="grid g3 sub">
+        <div><b>Skip agarbatti and mosquito coils.</b> One coil can release as much PM2.5 as dozens of cigarettes, right inside your room.</div>
+        <div><b>Wet-mop, don't sweep.</b> Dry sweeping lifts settled dust straight back into the air you breathe.</div>
+        <div><b>DIY purifier.</b> A box fan with a MERV 13 filter taped to the back gives real CADR for a fraction of the price.</div>
+        <div><b>Seal the gaps.</b> Weather strips and door snakes lower infiltration, so a purifier works far better.</div>
+        <div><b>Run it closed.</b> A purifier in a room with an open door is cleaning the whole house, badly.</div>
+        <div><b>Masks outdoors.</b> A well-fitted N95 cuts PM2.5 a lot; a loose cloth mask barely helps.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPOSURE -->
+  <section class="tab" id="tab-exposure">
+    <h2 class="section">Exposure</h2>
+    <p class="lead">How much smoke are you really breathing? Daily averages for the past five days and the next two, turned into something you can feel.</p>
+    <div class="card">
+      <div class="row-between"><h3 style="margin:0">Daily average PM2.5</h3><span class="sub">striped = forecast</span></div>
+      <div class="daybars" id="dayBars" style="margin-top:14px"></div>
+    </div>
+    <div class="grid g2" style="margin-top:16px;align-items:start">
+      <div class="card stack">
+        <h3>Your day</h3>
+        <label class="sub">Hours outdoors: <b id="hOutV">2</b>
+          <input type="range" id="hOut" min="0" max="16" value="2">
+        </label>
+        <label class="switch"><input type="checkbox" id="hasPurifier"> I run a purifier at home (uses the Indoor tab)</label>
+        <table class="simple" style="margin-top:6px">
+          <tr><th></th><th>PM2.5 you breathe</th><th>Cigarettes / day</th></tr>
+          <tr><td>Outdoor air all day</td><td id="exAll">-</td><td id="exAllC">-</td></tr>
+          <tr><td>Your actual day</td><td id="exYou">-</td><td id="exYouC">-</td></tr>
+          <tr><td>WHO daily guideline</td><td>15</td><td>0.7</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Today, in cigarettes</h3>
+        <div class="big" id="cigBig">-</div>
+        <div class="cigs" id="cigRow"></div>
+        <p class="sub" style="margin:12px 0 0">If you breathed today's outdoor air for 24 hours. Rough but well-known comparison from Berkeley Earth (22 µg/m³ for one day ≈ 1 cigarette).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BRIEF -->
+  <section class="tab" id="tab-brief">
+    <h2 class="section">Daily brief</h2>
+    <p class="lead">Every morning at 6:00 AM, an email with your cleanest windows for the day and how to re-time your routine. Not an alarm that says "bad air" every day: a plan.</p>
+    <div class="grid g2" style="align-items:start">
+      <div class="card stack">
+        <h3>Settings</h3>
+        <div class="sub">Location: <b id="briefPlace">-</b></div>
+        <div class="sub">Routine: <b id="briefRoutine">-</b> <a href="#planner" style="color:var(--brand)">edit</a></div>
+        <label class="sub">Email<input class="input" id="briefEmail" type="email" placeholder="you@example.com"></label>
+        <label class="switch"><input type="checkbox" id="briefOn" checked> Send me the 6:00 AM brief</label>
+        <div class="row-between">
+          <button class="btn" id="briefSave" type="button">Save</button>
+          <button class="btn ghost" id="briefTest" type="button">Send a test now</button>
+        </div>
+        <p id="briefMsg" class="msg"></p>
+        <p class="sub">First time? AWS sends a confirmation email. Click <b>Confirm subscription</b> or briefs won't arrive. Every brief has a one-click unsubscribe link.</p>
+      </div>
+      <div class="card">
+        <h3>Preview</h3>
+        <pre class="preview" id="briefPreview">Loading…</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="tab" id="tab-about">
+    <h2 class="section">How it works</h2>
+    <p class="lead">In Delhi the AQI is "Poor" or worse for weeks. Telling people that every day changes nothing. What does change is <b>when</b>: PM2.5 often swings two to three times within a single day. At night the ground cools, the mixing layer sinks to a few hundred metres and traps smoke. By afternoon the sun lifts it past a kilometre and dilutes it. SaafHawa forecasts that swing for your exact location and plans around it.</p>
+    <div class="grid g2" style="align-items:start">
+      <div class="card">
+        <h3>Architecture on AWS</h3>
+        <svg class="arch" viewBox="0 0 520 300" role="img" aria-label="Architecture diagram">
+          <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+          <rect class="box" x="10" y="20" width="120" height="44" rx="10"/><text x="70" y="47" text-anchor="middle">Browser</text>
+          <rect class="aws" x="190" y="20" width="140" height="44" rx="10"/><text x="260" y="47" text-anchor="middle">API Gateway</text>
+          <rect class="aws" x="190" y="128" width="140" height="44" rx="10"/><text x="260" y="155" text-anchor="middle">Lambda (Python)</text>
+          <rect class="aws" x="10" y="128" width="130" height="44" rx="10"/><text x="75" y="149" text-anchor="middle">EventBridge</text><text x="75" y="164" text-anchor="middle" style="font-weight:500;font-size:10px">6:00 AM daily</text>
+          <rect class="aws" x="380" y="70" width="130" height="44" rx="10"/><text x="445" y="97" text-anchor="middle">DynamoDB</text>
+          <rect class="aws" x="380" y="186" width="130" height="44" rx="10"/><text x="445" y="213" text-anchor="middle">SNS (email)</text>
+          <rect class="box" x="190" y="240" width="140" height="44" rx="10"/><text x="260" y="261" text-anchor="middle">Open-Meteo</text><text x="260" y="276" text-anchor="middle" style="font-weight:500;font-size:10px">CAMS PM2.5, weather</text>
+          <path class="arrow" d="M130 42H186"/>
+          <path class="arrow" d="M260 64V124"/>
+          <path class="arrow" d="M140 150H186"/>
+          <path class="arrow" d="M330 140L376 104"/>
+          <path class="arrow" d="M330 160L376 196"/>
+          <path class="arrow" d="M260 172V236"/>
+        </svg>
+        <table class="simple" style="margin-top:8px">
+          <tr><td><b>Lambda</b></td><td>Serves the app, runs the planner, builds and sends briefs</td></tr>
+          <tr><td><b>API Gateway</b></td><td>Public HTTPS endpoint</td></tr>
+          <tr><td><b>DynamoDB</b></td><td>User routines and 30-minute forecast cache (TTL)</td></tr>
+          <tr><td><b>EventBridge</b></td><td>Triggers the 6:00 AM brief</td></tr>
+          <tr><td><b>SNS</b></td><td>One topic, one filter policy per user, so each person gets only their own plan</td></tr>
+        </table>
+      </div>
+      <div class="card stack">
+        <h3>Method and honesty</h3>
+        <p class="sub"><b>Data.</b> Hourly PM2.5 and PM10 forecasts from Open-Meteo, based on the Copernicus CAMS atmospheric model, plus mixing-layer height and wind. Model data covers every town in India, including the many with no CPCB station.</p>
+        <p class="sub"><b>Index.</b> The NAQI shown is an estimate: 24-hour average PM2.5 and PM10 converted with CPCB breakpoints. It will differ from your nearest station reading.</p>
+        <p class="sub"><b>Planner.</b> For each activity, every allowed start hour is scored by mean forecast PM2.5 over its duration. Inhaled dose = concentration × breathing rate × time.</p>
+        <p class="sub"><b>Indoor.</b> Steady-state mass balance: indoor = 0.8 × leak rate × outdoor ÷ (leak rate + 0.2 deposition + CADR ÷ room volume). Real rooms vary; treat it as a guide.</p>
+        <p class="sub"><b>Limits.</b> The model grid is about 40 km, so it can miss very local sources like a burning garbage dump next door. Forecast skill drops after about 48 hours.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap row-between">
+    <span>SaafHawa · built on AWS for Environmental Hacks, Air track</span>
+    <span>Data: <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> (CC BY 4.0), Copernicus CAMS · NAQI breakpoints: CPCB</span>
+  </div>
+</footer>
+
+<div class="tooltip hidden" id="tip"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const PM_STEPS = [
+    [30, "#3a9a5b", "Good"], [60, "#8bbf3f", "Satisfactory"], [90, "#e3b21b", "Moderate"],
+    [120, "#ea7a1f", "Poor"], [250, "#d23b32", "Very Poor"], [Infinity, "#7b2d8e", "Severe"],
+  ];
+  const DEFAULT_PLACE = { label: "New Delhi, Delhi", lat: 28.614, lon: 77.209 };
+  const DEFAULT_ROUTINE = [
+    { activity: "run", hour: 6, duration: 1 },
+    { activity: "commute_am", hour: 8, duration: 1 },
+    { activity: "ventilate", hour: 7, duration: 1 },
+  ];
+  const ACT_FALLBACK = {
+    run: "Run or workout", walk: "Walk or outdoor yoga", commute_am: "Morning commute",
+    commute_pm: "Evening commute", kids: "Kids' outdoor play", errands: "Market or errands", ventilate: "Air out the home",
+  };
+  const UG_PER_CIG = 22;
+  const DAILY_BREATH_M3 = 15;
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem("saafhawa." + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem("saafhawa." + k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } },
+  };
+  function newUid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
+  const state = {
+    uid: store.get("uid", null) || newUid(),
+    place: store.get("place", DEFAULT_PLACE),
+    routine: store.get("routine", DEFAULT_ROUTINE),
+    overview: null,
+    plan: null,
+    planDay: "today",
+    activities: null,
+  };
+  store.set("uid", state.uid);
+
+  // ---------- utils
+  function pmColor(v) { for (const [lim, c] of PM_STEPS) if (v <= lim) return c; return PM_STEPS[PM_STEPS.length - 1][1]; }
+  function pmName(v) { for (const [lim, , n] of PM_STEPS) if (v <= lim) return n; return "Severe"; }
+  function fmtHour(h) { h = ((h % 24) + 24) % 24; if (h === 0) return "12 AM"; if (h === 12) return "12 PM"; return h < 12 ? h + " AM" : (h - 12) + " PM"; }
+  function el(tag, attrs = {}, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") n.className = v; else if (k === "style") n.style.cssText = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+    }
+    for (const kid of kids) if (kid != null) n.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+    return n;
+  }
+  function svg(tag, attrs = {}) {
+    const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    return n;
+  }
+  function msg(node, text, kind) { node.textContent = text || ""; node.className = "msg" + (kind ? " " + kind : ""); }
+  function globalMsg(text) { const g = $("globalMsg"); if (!text) { g.classList.add("hidden"); return; } g.classList.remove("hidden"); msg(g, text, "err"); }
+  async function api(path, opts) {
+    const res = await fetch(path, opts);
+    let data = {};
+    try { data = await res.json(); } catch (e) { /* ignore */ }
+    if (!res.ok) throw new Error(data.error || "Something went wrong. Try again.");
+    return data;
+  }
+  function post(path, body) {
+    return api(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  }
+  function actName(key) { return (state.activities && state.activities[key] && state.activities[key].name) || ACT_FALLBACK[key] || key; }
+
+  // ---------- tooltip
+  const tip = $("tip");
+  function showTip(e, text) { tip.textContent = text; tip.classList.remove("hidden"); tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; }
+  function hideTip() { tip.classList.add("hidden"); }
+  document.addEventListener("scroll", hideTip, { passive: true });
+
+  // ---------- tabs
+  const TABS = ["today", "planner", "indoor", "exposure", "brief", "about"];
+  function showTab() {
+    const name = (location.hash || "#today").slice(1);
+    const tab = TABS.includes(name) ? name : "today";
+    for (const t of TABS) $("tab-" + t).classList.toggle("active", t === tab);
+    document.querySelectorAll("nav.tabs a").forEach((a) => a.setAttribute("aria-current", a.getAttribute("href") === "#" + tab ? "page" : "false"));
+    hideTip();
+  }
+  window.addEventListener("hashchange", showTab);
+
+  // ---------- location
+  function placeQuery(p) {
+    return "lat=" + encodeURIComponent(p.lat) + "&lon=" + encodeURIComponent(p.lon) + "&label=" + encodeURIComponent(p.label);
+  }
+  $("locForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const q = $("locInput").value.trim();
+    if (!q) return;
+    await loadOverview("city=" + encodeURIComponent(q));
+  });
+  $("geoBtn").addEventListener("click", () => {
+    if (!navigator.geolocation) { globalMsg("Location isn't available in this browser. Search a city instead."); return; }
+    $("geoBtn").disabled = true;
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      $("geoBtn").disabled = false;
+      await loadOverview(placeQuery({ lat: pos.coords.latitude.toFixed(3), lon: pos.coords.longitude.toFixed(3), label: "Your location" }));
+    }, () => {
+      $("geoBtn").disabled = false;
+      globalMsg("Couldn't get your location. Search a city instead.");
+    }, { timeout: 10000 });
+  });
+
+  // ---------- load
+  async function loadOverview(query) {
+    globalMsg("");
+    $("placeName").textContent = "Loading…";
+    try {
+      const data = await api("/api/overview?" + query);
+      state.overview = data;
+      state.activities = data.activities;
+      state.place = data.place;
+      store.set("place", state.place);
+      $("locInput").value = "";
+      renderToday();
+      renderExposure();
+      renderIndoor(true);
+      renderBriefInfo();
+      await runPlan(false);
+    } catch (err) {
+      globalMsg(err.message);
+      $("placeName").textContent = state.place ? state.place.label : "";
+    }
+  }
+
+  // ---------- TODAY
+  function renderToday() {
+    const d = state.overview;
+    const n = d.now;
+    $("placeName").textContent = d.place.label;
+    $("nowRing").style.background = n.color;
+    $("nowNaqi").textContent = n.naqi;
+    $("nowCat").textContent = n.category;
+    const bits = ["PM2.5 now " + Math.round(n.pm25) + " µg/m³", "mostly " + n.driver];
+    if (n.wind != null) bits.push("wind " + Math.round(n.wind) + " km/h");
+    $("nowMeta").textContent = bits.join(" · ");
+    $("nowCigs").textContent = d.today_cigarettes != null ? "Breathing this all day ≈ " + d.today_cigarettes + " cigarettes" : "";
+
+    const st = d.stretch.today || d.stretch.tomorrow;
+    const which = d.stretch.today ? "today" : "tomorrow";
+    if (st) {
+      $("swingHeadline").textContent = st.ratio && st.ratio >= 1.2
+        ? "The worst hours " + which + " are " + st.ratio + "x dirtier than the cleanest. Timing is your best protection."
+        : "The air stays fairly flat " + which + ". Timing helps less; focus on indoor air and masks.";
+      $("cleanT").textContent = st.clean.label + (which === "tomorrow" ? " tomorrow" : "");
+      $("cleanV").textContent = "PM2.5 about " + Math.round(st.clean.pm25);
+      $("dirtyT").textContent = st.dirty.label + (which === "tomorrow" ? " tomorrow" : "");
+      $("dirtyV").textContent = "PM2.5 about " + Math.round(st.dirty.pm25);
+    }
+    $("whyText").textContent = d.why || "";
+    renderHourChart(d.chart, st, which);
+  }
+
+  function renderHourChart(points, st, which) {
+    const box = $("hourChart");
+    box.className = "";
+    box.replaceChildren();
+    const W = 960, H = 260, padL = 34, padR = 8, padT = 12, padB = 34;
+    const vals = points.map((p) => p.pm25).filter((v) => v != null);
+    const maxV = Math.max(60, ...vals);
+    const niceMax = Math.ceil(maxV / 50) * 50;
+    const bw = (W - padL - padR) / points.length;
+    const y = (v) => padT + (H - padT - padB) * (1 - v / niceMax);
+    const s = svg("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": "Hourly PM2.5 bar chart" });
+
+    for (let g = 0; g <= niceMax; g += niceMax / 4) {
+      s.append(svg("line", { x1: padL, x2: W - padR, y1: y(g), y2: y(g), class: "gridline" }));
+      const t = svg("text", { x: padL - 6, y: y(g) + 4, "text-anchor": "end" }); t.textContent = Math.round(g); s.append(t);
+    }
+
+    const dayStartIdx = which === "today" ? 0 : 24;
+    if (st) {
+      const cx = padL + (dayStartIdx + st.clean.hour) * bw;
+      s.append(svg("rect", { x: cx, y: padT, width: bw * 3, height: H - padT - padB, fill: "var(--good)", opacity: 0.12, rx: 4 }));
+      const dx = padL + (dayStartIdx + st.dirty.hour) * bw;
+      s.append(svg("rect", { x: dx, y: padT, width: bw * 3, height: H - padT - padB, fill: "var(--bad)", opacity: 0.10, rx: 4 }));
+    }
+
+    let nowIdx = -1;
+    points.forEach((p, i) => {
+      if (p.past) nowIdx = i;
+      const x = padL + i * bw;
+      if (i % 24 === 0) {
+        s.append(svg("line", { x1: x, x2: x, y1: padT, y2: H - padB + 18, class: "gridline" }));
+        const t = svg("text", { x: x + 4, y: H - 4, "font-weight": 700 }); t.textContent = i === 0 ? "Today" : "Tomorrow"; s.append(t);
+      }
+      if (i % 3 === 0) {
+        const t = svg("text", { x: x + bw / 2, y: H - padB + 14, "text-anchor": "middle" }); t.textContent = fmtHour(i % 24).replace(" ", ""); s.append(t);
+      }
+      if (p.pm25 == null) return;
+      const r = svg("rect", {
+        x: x + 1, y: y(p.pm25), width: Math.max(1, bw - 2), height: Math.max(1, H - padB - y(p.pm25)),
+        rx: 2, fill: pmColor(p.pm25), opacity: p.past ? 0.45 : 1, class: "bar",
+      });
+      const label = (i < 24 ? "Today " : "Tomorrow ") + fmtHour(i % 24) + ": " + Math.round(p.pm25) + " µg/m³ (" + pmName(p.pm25) + ")" + (p.blh != null ? " · mixing layer " + Math.round(p.blh) + " m" : "");
+      r.addEventListener("mousemove", (e) => showTip(e, label));
+      r.addEventListener("mouseleave", hideTip);
+      r.addEventListener("click", (e) => showTip(e, label));
+      s.append(r);
+    });
+    if (nowIdx >= 0) {
+      const x = padL + (nowIdx + 1) * bw;
+      s.append(svg("line", { x1: x, x2: x, y1: padT - 4, y2: H - padB, class: "nowline" }));
+      const t = svg("text", { x: x + 4, y: padT + 6, "font-weight": 700 }); t.textContent = "now"; s.append(t);
+    }
+    box.append(s);
+
+    const lg = $("hourLegend");
+    lg.replaceChildren();
+    PM_STEPS.forEach(([lim, c, n], i) => {
+      const lo = i === 0 ? 0 : PM_STEPS[i - 1][0] + 1;
+      lg.append(el("span", {}, el("i", { class: "dot", style: "background:" + c }), n + " " + (lim === Infinity ? lo + "+" : lo + "-" + lim)));
+    });
+    lg.append(el("span", {}, el("i", { class: "dot", style: "background:var(--good);opacity:.4" }), "cleanest 3h"));
+    lg.append(el("span", {}, el("i", { class: "dot", style: "background:var(--bad);opacity:.4" }), "worst 3h"));
+  }
+
+  function planCard(p, compact) {
+    const card = el("div", { class: "card plan-card" });
+    card.append(el("div", { class: "kicker" }, p.name + " · " + p.duration + "h"));
+    if (p.status !== "ok") {
+      card.append(el("p", { class: "sub" }, p.message));
+      return card;
+    }
+    const shift = el("div", { class: "shift" });
+    if (p.best_hour !== p.usual_hour && !p.usual_passed) {
+      shift.append(el("span", { class: "from" }, p.usual_label));
+      shift.append(el("span", { class: "muted" }, "→"));
+    }
+    shift.append(el("span", { class: "to" }, p.best_label));
+    if (p.saving_pct >= 8) shift.append(el("span", { class: "save" }, "−" + p.saving_pct + "%"));
+    card.append(shift);
+    card.append(el("p", { class: "sub", style: "margin:0" }, p.message));
+    if (!compact) card.append(optionChart(p));
+    return card;
+  }
+
+  function optionChart(p) {
+    const W = 460, H = 120, padB = 20, padT = 8;
+    const opts = p.options || [];
+    const max = Math.max(...opts.map((o) => o.pm25), 1);
+    const bw = W / Math.max(opts.length, 1);
+    const s = svg("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", style: "margin-top:12px;max-width:" + Math.max(140, opts.length * 52) + "px", preserveAspectRatio: "xMinYMax meet" });
+    opts.forEach((o, i) => {
+      const h = (H - padB - padT) * (o.pm25 / max);
+      const isBest = o.hour === p.best_hour, isUsual = o.hour === p.usual_hour;
+      const r = svg("rect", {
+        x: i * bw + 2, y: H - padB - h, width: Math.max(2, bw - 4), height: Math.max(1, h), rx: 3,
+        fill: isBest ? "var(--good)" : pmColor(o.pm25), opacity: isBest ? 1 : 0.55,
+        stroke: isUsual && !isBest ? "var(--ink)" : "none", "stroke-width": 1.5,
+      });
+      const label = "Start " + fmtHour(o.hour) + ": " + Math.round(o.pm25) + " µg/m³" + (isBest ? " (best)" : isUsual ? " (your usual)" : "");
+      r.addEventListener("mousemove", (e) => showTip(e, label));
+      r.addEventListener("mouseleave", hideTip);
+      r.addEventListener("click", (e) => showTip(e, label));
+      s.append(r);
+      if (opts.length <= 10 || i % 2 === 0) {
+        const t = svg("text", { x: i * bw + bw / 2, y: H - 5, "text-anchor": "middle" });
+        t.textContent = fmtHour(o.hour).replace(" ", ""); s.append(t);
+      }
+    });
+    return s;
+  }
+
+  // ---------- PLANNER
+  function hourOptions(sel) {
+    const s = el("select", { class: "input", "aria-label": "Usual start time" });
+    for (let h = 0; h < 24; h++) { const o = el("option", { value: h }, fmtHour(h)); if (h === sel) o.selected = true; s.append(o); }
+    return s;
+  }
+  function renderRoutine() {
+    const box = $("routineRows");
+    box.replaceChildren();
+    box.append(el("div", { class: "routine-row kicker" }, el("span", {}, "Activity"), el("span", {}, "Usual start"), el("span", {}, "Hours"), el("span", {}, "")));
+    state.routine.forEach((r, idx) => {
+      const actSel = el("select", { class: "input", "aria-label": "Activity" });
+      Object.keys(ACT_FALLBACK).forEach((k) => { const o = el("option", { value: k }, actName(k)); if (k === r.activity) o.selected = true; actSel.append(o); });
+      const hourSel = hourOptions(r.hour);
+      const durSel = el("select", { class: "input", "aria-label": "Duration" });
+      [1, 2, 3].forEach((d) => { const o = el("option", { value: d }, d + "h"); if (d === r.duration) o.selected = true; durSel.append(o); });
+      actSel.addEventListener("change", () => {
+        r.activity = actSel.value;
+        const a = state.activities && state.activities[r.activity];
+        if (a) { r.hour = a.hour; r.duration = a.duration; }
+        renderRoutine();
+      });
+      hourSel.addEventListener("change", () => { r.hour = Number(hourSel.value); });
+      durSel.addEventListener("change", () => { r.duration = Number(durSel.value); });
+      const del = el("button", { class: "btn ghost small del", type: "button", "aria-label": "Remove" }, "Remove");
+      del.addEventListener("click", () => {
+        if (state.routine.length <= 1) { msg($("planMsg"), "Keep at least one activity.", "err"); return; }
+        state.routine.splice(idx, 1); renderRoutine();
+      });
+      box.append(el("div", { class: "routine-row" }, actSel, hourSel, durSel, del));
+    });
+  }
+  $("addRow").addEventListener("click", () => {
+    if (state.routine.length >= 8) { msg($("planMsg"), "Up to 8 activities.", "err"); return; }
+    const used = new Set(state.routine.map((r) => r.activity));
+    const next = Object.keys(ACT_FALLBACK).find((k) => !used.has(k)) || "walk";
+    const a = (state.activities && state.activities[next]) || { hour: 9, duration: 1 };
+    state.routine.push({ activity: next, hour: a.hour, duration: a.duration });
+    renderRoutine();
+  });
+  $("runPlan").addEventListener("click", () => runPlan(true));
+  $("daySeg").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    state.dayChosen = true;
+    setPlanDay(b.dataset.day);
+    renderPlan();
+  });
+
+  async function runPlan(userClicked) {
+    store.set("routine", state.routine);
+    if (userClicked) { $("runPlan").disabled = true; msg($("planMsg"), "Planning…"); }
+    try {
+      const data = await post("/api/plan", { place: state.place, routine: state.routine });
+      state.plan = data.plan;
+      if (!state.dayChosen) setPlanDay(planDayAuto());
+      renderPlan();
+      renderTodayPlan();
+      renderIndoor(false);
+      renderBriefInfo();
+      if (userClicked) msg($("planMsg"), "Plan updated.", "ok");
+      syncProfileQuietly();
+    } catch (err) {
+      msg($("planMsg"), err.message, "err");
+    } finally {
+      $("runPlan").disabled = false;
+    }
+  }
+
+  function planDayAuto() {
+    return state.plan && state.plan.today.every((p) => p.status === "ok") ? "today" : "tomorrow";
+  }
+  function setPlanDay(day) {
+    state.planDay = day;
+    $("daySeg").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.day === day));
+  }
+  function renderPlan() {
+    if (!state.plan) return;
+    const items = state.plan[state.planDay];
+    const box = $("planCards");
+    box.replaceChildren(...items.map((p) => planCard(p, false)));
+    let saved = 0, pctSum = 0, n = 0;
+    items.forEach((p) => {
+      if (p.status !== "ok") return;
+      if (p.dose_saved_ug) saved += p.dose_saved_ug;
+      if (p.kind === "outdoor") { pctSum += p.saving_pct; n++; }
+    });
+    $("totSaved").textContent = saved ? saved.toLocaleString("en-IN") + " µg" : "0 µg";
+    $("totPct").textContent = n ? Math.round(pctSum / n) + "%" : "-";
+    const cigs = saved / (UG_PER_CIG * DAILY_BREATH_M3);
+    $("totCigs").textContent = cigs >= 0.05 ? cigs.toFixed(1) + " cig." : "< 0.1 cig.";
+  }
+  function renderTodayPlan() {
+    const box = $("todayPlan");
+    if (!state.plan) return;
+    const day = planDayAuto();
+    $("todayPlanTitle").textContent = "Your routine, re-timed for " + day;
+    box.replaceChildren(...state.plan[day].map((p) => planCard(p, true)));
+  }
+
+  // ---------- INDOOR
+  function indoorCalc() {
+    const ft3 = Number($("rmL").value) * Number($("rmW").value) * Number($("rmH").value);
+    const vol = Math.max(5, ft3 * 0.0283168);
+    const leak = Number($("rmLeak").value);
+    const cadr = Math.max(0, Number($("rmCadr").value) || 0);
+    const out = Math.max(0, Number($("rmOut").value) || 0);
+    const P = 0.8, k = 0.2;
+    const inNo = P * leak * out / (leak + k);
+    const inYes = P * leak * out / (leak + k + cadr / vol);
+    // CADR so that indoor is at most WHO 15 ug/m3, and at least 5 air changes per hour
+    const forWho = out > 0 ? Math.max(0, vol * ((P * leak * out) / 15 - leak - k)) : 0;
+    const need = Math.max(vol * 5, forWho);
+    return { vol, leak, cadr, out, inNo, inYes, need, forWho };
+  }
+  function renderIndoor(resetOutdoor) {
+    if (resetOutdoor && state.overview) $("rmOut").value = Math.round(state.overview.now.pm25);
+    const c = indoorCalc();
+    $("inNo").textContent = Math.round(c.inNo);
+    $("inYes").textContent = c.cadr > 0 ? Math.round(c.inYes) : "-";
+    $("inYesSub").textContent = c.cadr > 0 ? "µg/m³ PM2.5 · " + Math.round((1 - c.inYes / Math.max(c.inNo, 0.01)) * 100) + "% cleaner" : "Enter your purifier's CADR";
+    $("needCadr").textContent = Math.round(c.need) + " m³/h";
+    $("needSub").textContent = "CADR for a " + Math.round(c.vol) + " m³ room (" + Math.round(c.need / 1.699) + " CFM). That's 5 air changes an hour" +
+      (c.forWho > c.vol * 5 ? ", raised to keep this room near the WHO limit of 15 µg/m³ at today's outdoor level." : ", which also keeps the room near WHO limits at today's level.");
+    const vDay = state.plan ? planDayAuto() : "today";
+    const v = state.plan && state.plan[vDay].find((p) => p.kind === "ventilation" && p.status === "ok");
+    $("ventKicker").textContent = "Best time to air the room " + vDay;
+    if (v) {
+      $("ventBest").textContent = v.best_label;
+      $("ventSub").textContent = "Outdoor PM2.5 about " + Math.round(v.best_pm25) + " then, versus " + Math.round(v.worst_pm25) + " around " + fmtHour(v.worst_hour) + ". Air out for 10 to 15 minutes to clear stale air, then close up.";
+    } else {
+      $("ventBest").textContent = "Add “Air out the home” in Planner";
+      $("ventSub").textContent = "";
+    }
+    renderExposureYou();
+  }
+  ["rmL", "rmW", "rmH", "rmLeak", "rmCadr", "rmOut"].forEach((id) => $(id).addEventListener("input", () => renderIndoor(false)));
+
+  // ---------- EXPOSURE
+  function renderExposure() {
+    const d = state.overview;
+    const box = $("dayBars");
+    box.replaceChildren();
+    const max = Math.max(...d.days.map((x) => x.pm25), 60);
+    d.days.forEach((x) => {
+      const h = Math.max(4, 120 * x.pm25 / max);
+      box.append(el("div", { class: "daybar", title: x.label + ": " + Math.round(x.pm25) + " µg/m³, NAQI " + x.naqi + " (" + x.category + "), ≈ " + x.cigarettes + " cigarettes" },
+        el("span", { class: "v" }, Math.round(x.pm25)),
+        el("div", { class: "b" + (x.kind === "forecast" ? " forecast" : ""), style: "height:" + h + "px;background-color:" + x.color + (x.kind === "today" ? ";outline:2px solid var(--ink);outline-offset:2px" : "") }),
+        el("small", {}, x.label),
+        el("small", {}, "≈" + x.cigarettes + " cig"),
+      ));
+    });
+    const today = d.days.find((x) => x.kind === "today");
+    const cigs = today ? today.cigarettes : 0;
+    $("cigBig").textContent = today ? "≈ " + cigs + " cigarettes" : "-";
+    const row = $("cigRow");
+    row.replaceChildren();
+    const whole = Math.floor(Math.min(cigs, 40));
+    for (let i = 0; i < whole; i++) row.append(el("i"));
+    if (cigs - whole >= 0.3 && whole < 40) row.append(el("i", { class: "half" }));
+    renderExposureYou();
+  }
+  function renderExposureYou() {
+    const d = state.overview;
+    if (!d) return;
+    const today = d.days.find((x) => x.kind === "today");
+    if (!today) return;
+    const out = today.pm25;
+    const hOut = Number($("hOut").value);
+    $("hOutV").textContent = hOut;
+    const c = indoorCalc();
+    const P = 0.8, k = 0.2;
+    const inside = $("hasPurifier").checked && c.cadr > 0
+      ? P * c.leak * out / (c.leak + k + c.cadr / c.vol)
+      : P * c.leak * out / (c.leak + k);
+    const avg = (hOut * out + (24 - hOut) * inside) / 24;
+    $("exAll").textContent = Math.round(out) + " µg/m³";
+    $("exAllC").textContent = (out / UG_PER_CIG).toFixed(1);
+    $("exYou").textContent = Math.round(avg) + " µg/m³";
+    $("exYouC").textContent = (avg / UG_PER_CIG).toFixed(1);
+  }
+  $("hOut").addEventListener("input", renderExposureYou);
+  $("hasPurifier").addEventListener("change", renderExposureYou);
+
+  // ---------- BRIEF
+  function renderBriefInfo() {
+    $("briefPlace").textContent = state.place ? state.place.label : "-";
+    $("briefRoutine").textContent = state.routine.map((r) => actName(r.activity)).join(", ");
+    const d = state.overview;
+    if (!d || !state.plan) return;
+    const day = d.stretch.today && planDayAuto() === "today" ? "today" : "tomorrow";
+    const st = d.stretch[day];
+    const lines = ["Your clean-air plan for " + d.place.label + " " + day + ":", ""];
+    if (st) {
+      lines.push("Cleanest stretch: " + st.clean.label + " (PM2.5 about " + Math.round(st.clean.pm25) + ").");
+      lines.push("Worst stretch: " + st.dirty.label + " (PM2.5 about " + Math.round(st.dirty.pm25) + "). Stay in and keep windows shut.");
+      if (st.ratio) lines.push("The worst hours are " + st.ratio + "x dirtier than the cleanest, so timing matters " + day + ".");
+    }
+    lines.push("", "Your routine:");
+    state.plan[day].forEach((p) => lines.push("  - " + p.name + ": " + p.message));
+    lines.push("");
+    if (d.today_cigarettes != null) lines.push("Breathing today's outdoor air all day is roughly like smoking " + d.today_cigarettes + " cigarettes.");
+    lines.push("Right now: estimated NAQI " + d.now.naqi + " (" + d.now.category + "), mostly " + d.now.driver + ".");
+    $("briefPreview").textContent = lines.join("\n");
+  }
+  async function loadProfile() {
+    try {
+      const p = await api("/api/profile?uid=" + encodeURIComponent(state.uid));
+      if (p.exists) {
+        $("briefEmail").value = p.email || "";
+        $("briefOn").checked = !!p.brief;
+        state.hasProfile = true;
+      }
+    } catch (e) { /* first visit */ }
+  }
+  async function saveProfile() {
+    return post("/api/profile", {
+      uid: state.uid, email: $("briefEmail").value.trim(), brief: $("briefOn").checked,
+      place: state.place, routine: state.routine,
+    });
+  }
+  async function syncProfileQuietly() {
+    if (!state.hasProfile) return;
+    try { await saveProfile(); } catch (e) { /* keep local */ }
+  }
+  $("briefSave").addEventListener("click", async () => {
+    $("briefSave").disabled = true;
+    msg($("briefMsg"), "Saving…");
+    try {
+      const r = await saveProfile();
+      state.hasProfile = true;
+      msg($("briefMsg"), r.message, "ok");
+    } catch (err) { msg($("briefMsg"), err.message, "err"); }
+    finally { $("briefSave").disabled = false; }
+  });
+  $("briefTest").addEventListener("click", async () => {
+    $("briefTest").disabled = true;
+    msg($("briefMsg"), "Sending…");
+    try {
+      const r = await post("/api/brief/test", { uid: state.uid });
+      msg($("briefMsg"), r.message, "ok");
+    } catch (err) { msg($("briefMsg"), err.message, "err"); }
+    finally { $("briefTest").disabled = false; }
+  });
+
+  // ---------- boot
+  showTab();
+  renderRoutine();
+  loadProfile();
+  loadOverview(placeQuery(state.place));
+})();
+</script>
+</body>
+</html>
