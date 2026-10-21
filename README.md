@@ -1,5 +1,7 @@
 # SaafHawa: a personal clean-air planner
 
+**Live demo: https://nho1xxv73m.execute-api.ap-south-1.amazonaws.com/** · [Demo video](https://youtu.be/3eTWmP0NtAU?si=yu8hPancDLZs2cGw)
+
 **Track: Air** · Environmental Hacks, Bharat Builds Tour (WeMakeDevs x AWS)
 
 ## The problem
